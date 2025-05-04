@@ -1,0 +1,107 @@
+Counter Strike 2;0
+Marvel Rivals;29.99
+PUBG Battlegrounds;0
+EA Sports FC 24;69.99
+Call of Duty Modern Warfare III;69.99
+Baldurs Gate 3;59.99
+Cyberpunk 2077;59.99
+Elden Ring;59.99
+Hogwarts Legacy;59.99
+Red Dead Redemption 2;59.99
+Grand Theft Auto V;29.99
+The Witcher 3 Wild Hunt;39.99
+Assassins Creed Valhalla;59.99
+Resident Evil 4;59.99
+Dead Space Remake;59.99
+God of War;49.99
+Hades;24.99
+Stardew Valley;14.99
+Hollow Knight;14.99
+Terraria;9.99
+Valheim;19.99
+Among Us;4.99
+Rust;39.99
+ARK Survival Evolved;29.99
+Phasmophobia;13.99
+The Forest;19.99
+Sons of the Forest;29.99
+Subnautica;29.99
+No Mans Sky;59.99
+Dying Light 2 Stay Human;59.99
+The Elder Scrolls V Skyrim Special Edition;39.99
+Fallout 4;19.99
+Fallout New Vegas;9.99
+Dark Souls III;59.99
+Sekiro Shadows Die Twice;59.99
+Monster Hunter World;29.99
+Monster Hunter Rise;39.99
+Persona 5 Royal;59.99
+Yakuza Like a Dragon;59.99
+Nier Automata;39.99
+Nier Replicant;59.99
+Final Fantasy VII Remake Intergrade;69.99
+Final Fantasy XIV Online;19.99
+Final Fantasy XV Windows Edition;34.99
+Dragon Quest XI Echoes of an Elusive Age;59.99
+Octopath Traveler;59.99
+Octopath Traveler II;59.99
+The Legend of Heroes Trails of Cold Steel IV;59.99
+The Legend of Heroes Trails into Reverie;59.99
+The Legend of Heroes Trails from Zero;49.99
+The Legend of Heroes Trails to Azure;49.99
+Atelier Ryza Ever Darkness and the Secret Hideout;59.99
+Atelier Ryza 2 Lost Legends and the Secret Fairy;59.99
+Atelier Ryza 3 Alchemist of the End and the Secret Key;59.99
+Blue Protocol;0
+Tower of Fantasy;0
+Genshin Impact;0
+Honkai Star Rail;0
+Warframe;0
+Destiny 2;0
+Apex Legends;0
+Fortnite;0
+League of Legends;0
+Overwatch 2;0
+Team Fortress 2;0
+Dota 2;0
+Paladins;0
+Smite;0
+World of Tanks;0
+World of Warships;0
+Crossfire;0
+Black Desert Online;9.99
+Lost Ark;0
+New World;39.99
+The Sims 4;0
+Cities Skylines;29.99
+Planet Zoo;44.99
+Planet Coaster;44.99
+Two Point Hospital;34.99
+Two Point Campus;39.99
+Football Manager 2025;59.99
+NBA 2K25;59.99
+Madden NFL 25;59.99
+F1 2025;59.99
+Forza Horizon 5;59.99
+Forza Motorsport;69.99
+Gran Turismo 7;69.99
+Need for Speed Unbound;69.99
+Assetto Corsa Competizione;39.99
+Project CARS 3;59.99
+Euro Truck Simulator 2;19.99
+American Truck Simulator;19.99
+Microsoft Flight Simulator;59.99
+X Plane 12;59.99
+Train Sim World 3;39.99
+Train Simulator Classic;29.99
+Railway Empire 2;49.99
+Transport Fever 2;39.99
+Factorio;646.36
+Oxygen Not Included;24.99
+RimWorld;34.99
+Prison Architect;29.99
+Banished;19.99
+Frostpunk;29.99
+Surviving Mars;29.99
+Surviving the Aftermath;29.99
+Endzone A World Apart;29.99
