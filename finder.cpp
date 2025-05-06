@@ -5,6 +5,8 @@
 #include <string>
 #include <filesystem>
 #include <algorithm>
+#include <iomanip>
+#include <map>
 
 using namespace std;
 namespace fs = filesystem;
@@ -63,7 +65,8 @@ void listAllGames(const vector<GameEntry>& allGames) {
     }
 
     cout << "---------------------------------------------\n";
-    cout << "Press Enter to continue..."; cin.get();
+    cout << "Press Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
 }
 
 void searchGame(const string& inputName, const vector<GameEntry>& allGames) {
@@ -79,28 +82,61 @@ void searchGame(const string& inputName, const vector<GameEntry>& allGames) {
     if (matches.empty()) {
         cout << "\nNo data found for \"" << inputName << "\".\n";
     } else {
-        cout << "\n--- " << inputName << " is found in " << matches.size() << " platform(s): ---\n";
-        
-        // Tablo başlıkları
-        cout << "-------------------------------------------------------------\n";
-        cout << "| " << left << setw(30) << "Game Name" << " | " 
-             << left << setw(10) << "Platform" << " | " 
-             << left << setw(10) << "Price (TL)" << " |\n";
-        cout << "-------------------------------------------------------------\n";
-
-        GameEntry cheapest = matches[0];
+        // Gruplama için map (oyun adı → oyun listesi)
+        map<string, vector<GameEntry>> groupedGames;
         for (const auto& game : matches) {
-            // Oyun bilgilerini tablo formatında yazdırma
-            printf("| %-30s | %-10s | %-10.2f |\n", game.name.c_str(), game.platform.c_str(), game.price);
-            if (game.price < cheapest.price) {
-                cheapest = game;
-            }
+            string key = toLower(game.name);
+            groupedGames[key].push_back(game);
         }
-        cout << "\nCheapest Deal: " << cheapest.price << " TL on " << cheapest.platform << "\n";
+
+        cout << "\n--- Search results for \"" << inputName << "\": ---\n";
+
+        for (const auto& group : groupedGames) {
+            const vector<GameEntry>& gameList = group.second;
+
+            // Oyun adını yazdır
+            cout << "\nGame: " << gameList[0].name << "\n";
+
+            // Başlıklar
+            cout << "-------------------------------------------------------------\n";
+            cout << "| " << left << setw(30) << "Platform" << " | "
+                 << left << setw(10) << "Price (TL)" << " |\n";
+            cout << "-------------------------------------------------------------\n";
+
+            double minPrice = gameList[0].price;
+            for (const auto& game : gameList) {
+                printf("| %-30s | %-10.2f |\n", game.platform.c_str(), game.price);
+                if (game.price < minPrice) {
+                    minPrice = game.price;
+                }
+            }
+
+            // En ucuz fiyatı sunan platformları listele
+            vector<string> cheapestPlatforms;
+            for (const auto& game : gameList) {
+                if (game.price == minPrice) {
+                    cheapestPlatforms.push_back(game.platform);
+                }
+            }
+
+            // Tek satırda yazdır
+            cout << "-------------------------------------------------------------\n";
+            cout << "Cheapest Deal: " << minPrice << " TL on: ";
+            for (size_t i = 0; i < cheapestPlatforms.size(); ++i) {
+                cout << cheapestPlatforms[i];
+                if (i != cheapestPlatforms.size() - 1) {
+                    cout << " - ";
+                }
+            }
+            cout << "\n=============================================================\n";
+        }
     }
-    cout << "---------------------------------------------\n";
-    cout << "Press Enter to continue..."; cin.get();
+
+    cout << "Press Enter to continue...";
+    cin.get();
 }
+
+
 
 void addGame(vector<GameEntry>& allGames, const string& dataFolder) {
     string name, platform;
@@ -117,7 +153,8 @@ void addGame(vector<GameEntry>& allGames, const string& dataFolder) {
     if (platform.empty()) {
         cout << "Platform name cannot be empty. Game not added.\n";
         cout << "---------------------------------------------\n";
-        cout << "Press Enter to continue..."; cin.get();
+        cout << "Press Enter to continue...";
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
         return;
     }
 
@@ -139,7 +176,8 @@ void addGame(vector<GameEntry>& allGames, const string& dataFolder) {
     }
 
     cout << "---------------------------------------------\n";
-    cout << "Press Enter to continue..."; cin.get();
+    cout << "Press Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
 }
 
 void deleteGame(vector<GameEntry>& allGames, const string& dataFolder) {
@@ -182,7 +220,8 @@ void deleteGame(vector<GameEntry>& allGames, const string& dataFolder) {
         cout << "Game not found.\n";
     }
     cout << "---------------------------------------------\n";
-    cout << "Press Enter to continue..."; cin.get();
+    cout << "Press Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
 }
 
 void updateGamePrice(vector<GameEntry>& allGames, const string& dataFolder) {
@@ -234,7 +273,8 @@ void updateGamePrice(vector<GameEntry>& allGames, const string& dataFolder) {
         cout << "Game not found.\n";
     }
     cout << "---------------------------------------------\n";
-    cout << "Press Enter to continue..."; cin.get();
+    cout << "Press Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
 }
 
 int main() {
