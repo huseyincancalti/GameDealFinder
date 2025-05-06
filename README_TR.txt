@@ -42,7 +42,7 @@ Oyun ekleme, silme ve fiyat güncelleme işlemlerini destekler.
 ### 📂 Veri Saklama
 
 - Tüm oyun verileri `data/` klasöründe saklanır  
-- Her platform için ayrı bir `.txt` dosyası vardır 
+- Her platform için ayrı bir `.txt` dosyası vardır  
 
 ---
 
@@ -51,4 +51,3 @@ Oyun ekleme, silme ve fiyat güncelleme işlemlerini destekler.
 Bu proje **Hüseyin Can Çaltı** tarafından geliştirilmiştir.  
 🔗 Diğer projeler ve içerikler için web sitemi ziyaret edebilirsiniz:  
 [https://huseyincancalti.github.io/karakedidub/](https://huseyincancalti.github.io/karakedidub/)
-
