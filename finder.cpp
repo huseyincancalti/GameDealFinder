@@ -50,6 +50,22 @@ vector<GameEntry> readDataFromFile(const string& filepath, const string& platfor
     return games;
 }
 
+void listAllGames(const vector<GameEntry>& allGames) {
+    cout << "\nAvailable games in database:\n";
+    vector<string> gameNames;
+
+    for (const auto& game : allGames) {
+        string lowered = toLower(game.name);
+        if (find(gameNames.begin(), gameNames.end(), lowered) == gameNames.end()) {
+            gameNames.push_back(lowered);
+            cout << "- " << game.name << "\n";
+        }
+    }
+
+    cout << "---------------------------------------------\n";
+    cout << "Press Enter to continue..."; cin.get();
+}
+
 void searchGame(const string& inputName, const vector<GameEntry>& allGames) {
     string searchTerm = toLower(trim(inputName));
     vector<GameEntry> matches;
@@ -64,31 +80,24 @@ void searchGame(const string& inputName, const vector<GameEntry>& allGames) {
         cout << "\nNo data found for \"" << inputName << "\".\n";
     } else {
         cout << "\n--- " << inputName << " is found in " << matches.size() << " platform(s): ---\n";
+        
+        // Tablo başlıkları
+        cout << "-------------------------------------------------------------\n";
+        cout << "| " << left << setw(30) << "Game Name" << " | " 
+             << left << setw(10) << "Platform" << " | " 
+             << left << setw(10) << "Price (TL)" << " |\n";
+        cout << "-------------------------------------------------------------\n";
+
         GameEntry cheapest = matches[0];
         for (const auto& game : matches) {
-            cout << "Platform: " << game.platform << " | Price: " << game.price << " TL\n";
+            // Oyun bilgilerini tablo formatında yazdırma
+            printf("| %-30s | %-10s | %-10.2f |\n", game.name.c_str(), game.platform.c_str(), game.price);
             if (game.price < cheapest.price) {
                 cheapest = game;
             }
         }
         cout << "\nCheapest Deal: " << cheapest.price << " TL on " << cheapest.platform << "\n";
     }
-    cout << "---------------------------------------------\n";
-    cout << "Press Enter to continue..."; cin.get();
-}
-
-void listAllGames(const vector<GameEntry>& allGames) {
-    cout << "\nAvailable games in database:\n";
-    vector<string> gameNames;
-
-    for (const auto& game : allGames) {
-        string lowered = toLower(game.name);
-        if (find(gameNames.begin(), gameNames.end(), lowered) == gameNames.end()) {
-            gameNames.push_back(lowered);
-            cout << "- " << game.name << "\n";
-        }
-    }
-
     cout << "---------------------------------------------\n";
     cout << "Press Enter to continue..."; cin.get();
 }
