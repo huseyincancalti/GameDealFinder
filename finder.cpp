@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <map>
+#include <set>
 
 using namespace std;
 namespace fs = filesystem;
@@ -17,317 +18,410 @@ struct GameEntry {
     double price;
 };
 
-string toLower(const string& str) {
-    string lowerStr = str;
-    transform(str.begin(), str.end(), lowerStr.begin(), ::tolower);
-    return lowerStr;
+string toLower(const string& s) {
+    string r = s;
+    transform(r.begin(), r.end(), r.begin(), ::tolower);
+    return r;
 }
 
-string trim(const string& str) {
-    size_t first = str.find_first_not_of(" \t\n\r");
-    size_t last = str.find_last_not_of(" \t\n\r");
-    return (first == string::npos) ? "" : str.substr(first, last - first + 1);
+string trim(const string& s) {
+    size_t a = s.find_first_not_of(" \t\r\n");
+    size_t b = s.find_last_not_of(" \t\r\n");
+    return (a == string::npos ? "" : s.substr(a, b - a + 1));
 }
 
-vector<GameEntry> readDataFromFile(const string& filepath, const string& platformName) {
-    vector<GameEntry> games;
-    ifstream file(filepath);
-    if (!file.is_open()) {
-        cerr << "Failed to open file: " << filepath << "\n";
-        return games;
-    }
-
+vector<GameEntry> readDataFromFile(const string& filepath, const string& platform) {
+    vector<GameEntry> v;
+    ifstream f(filepath);
     string line;
-    while (getline(file, line)) {
+    while (getline(f, line)) {
         stringstream ss(line);
         string name, priceStr;
         if (getline(ss, name, ';') && getline(ss, priceStr)) {
-            GameEntry entry;
-            entry.platform = platformName;
-            entry.name = trim(name);
-            entry.price = stod(priceStr);
-            games.push_back(entry);
+            v.push_back({platform, trim(name), stod(trim(priceStr))});
         }
     }
-    return games;
+    return v;
 }
 
-void listAllGames(const vector<GameEntry>& allGames) {
-    cout << "\nAvailable games in database:\n";
-    vector<string> gameNames;
-
-    for (const auto& game : allGames) {
-        string lowered = toLower(game.name);
-        if (find(gameNames.begin(), gameNames.end(), lowered) == gameNames.end()) {
-            gameNames.push_back(lowered);
-            cout << "- " << game.name << "\n";
-        }
+void rewriteFile(const string& filepath, const vector<GameEntry>& v) {
+    ofstream f(filepath);
+    for (auto& e : v) {
+        f << e.name << ";" << e.price << "\n";
     }
-
-    cout << "---------------------------------------------\n";
-    cout << "Press Enter to continue...";
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
 }
 
-void searchGame(const string& inputName, const vector<GameEntry>& allGames) {
-    string searchTerm = toLower(trim(inputName));
-    vector<GameEntry> matches;
+void addGamesBulk(vector<GameEntry>& allGames, const string& dataFolder) {
+    cout << "\nEnter lines in format: GameName;Platform;Price\n"
+         << "Leave an empty line to finish\n\n";
+    string line;
+    while (true) {
+        cout << "> ";
+        if (!getline(cin, line) || trim(line).empty()) break;
 
-    for (const auto& game : allGames) {
-        if (toLower(game.name).find(searchTerm) != string::npos) {
-            matches.push_back(game);
+        size_t p1 = line.find(';');
+        size_t p2 = line.rfind(';');
+        if (p1 == string::npos || p2 == p1) {
+            cout << "  Invalid format, skipped.\n";
+            continue;
         }
+
+        string name     = trim(line.substr(0, p1));
+        string plat     = trim(line.substr(p1 + 1, p2 - p1 - 1));
+        string priceStr = trim(line.substr(p2 + 1));
+        double price;
+        try {
+            price = stod(priceStr);
+        } catch (...) {
+            cout << "  Invalid price, skipped.\n";
+            continue;
+        }
+
+        string lowPlat  = toLower(plat);
+        string filepath = dataFolder + lowPlat + ".txt";
+
+        // Load existing entries for this platform
+        auto fileGames = readDataFromFile(filepath, plat);
+        bool found = false;
+        for (auto& g : fileGames) {
+            if (toLower(g.name) == toLower(name)) {
+                g.price = price;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            fileGames.push_back({plat, name, price});
+        }
+
+        // Rewrite platform file
+        rewriteFile(filepath, fileGames);
+
+        // Update in-memory list
+        bool memFound = false;
+        for (auto& g : allGames) {
+            if (toLower(g.name) == toLower(name) && toLower(g.platform) == lowPlat) {
+                g.price = price;
+                memFound = true;
+                break;
+            }
+        }
+        if (!memFound) {
+            allGames.push_back({plat, name, price});
+        }
+
+        cout << "  [" << name << " @ " << plat << "] "
+             << (found ? "updated" : "added")
+             << " at " << price << " TL\n";
     }
-
-    if (matches.empty()) {
-        cout << "\nNo data found for \"" << inputName << "\".\n";
-    } else {
-        // Gruplama için map (oyun adı → oyun listesi)
-        map<string, vector<GameEntry>> groupedGames;
-        for (const auto& game : matches) {
-            string key = toLower(game.name);
-            groupedGames[key].push_back(game);
-        }
-
-        cout << "\n--- Search results for \"" << inputName << "\": ---\n";
-
-        for (const auto& group : groupedGames) {
-            const vector<GameEntry>& gameList = group.second;
-
-            // Oyun adını yazdır
-            cout << "\nGame: " << gameList[0].name << "\n";
-
-            // Başlıklar
-            cout << "-------------------------------------------------------------\n";
-            cout << "| " << left << setw(30) << "Platform" << " | "
-                 << left << setw(10) << "Price (TL)" << " |\n";
-            cout << "-------------------------------------------------------------\n";
-
-            double minPrice = gameList[0].price;
-            for (const auto& game : gameList) {
-                printf("| %-30s | %-10.2f |\n", game.platform.c_str(), game.price);
-                if (game.price < minPrice) {
-                    minPrice = game.price;
-                }
-            }
-
-            // En ucuz fiyatı sunan platformları listele
-            vector<string> cheapestPlatforms;
-            for (const auto& game : gameList) {
-                if (game.price == minPrice) {
-                    cheapestPlatforms.push_back(game.platform);
-                }
-            }
-
-            // Tek satırda yazdır
-            cout << "-------------------------------------------------------------\n";
-            cout << "Cheapest Deal: " << minPrice << " TL on: ";
-            for (size_t i = 0; i < cheapestPlatforms.size(); ++i) {
-                cout << cheapestPlatforms[i];
-                if (i != cheapestPlatforms.size() - 1) {
-                    cout << " - ";
-                }
-            }
-            cout << "\n=============================================================\n";
-        }
-    }
-
-    cout << "Press Enter to continue...";
+    cout << "\nBulk entry complete. Press Enter to continue...";
     cin.get();
 }
 
+void listAllGames(const vector<GameEntry>& allGames) {
+    cout << "\nAvailable games:\n";
+    set<string> seen;
+    for (auto& g : allGames) {
+        string low = toLower(g.name);
+        if (!seen.count(low)) {
+            seen.insert(low);
+            cout << "- " << g.name << "\n";
+        }
+    }
+    cout << "---------------------------------\nPress Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+}
 
+void searchGame(const vector<GameEntry>& allGames) {
+    cout << "Enter game name to search: ";
+    string term;
+    getline(cin, term);
+    string lowTerm = toLower(trim(term));
 
-void addGame(vector<GameEntry>& allGames, const string& dataFolder) {
-    string name, platform;
-    double price;
-
-    cout << "Enter game name: ";
-    getline(cin, name);
-    cout << "Enter platform name (cannot be empty): ";
-    getline(cin, platform);
-
-    name = trim(name);
-    platform = trim(platform);
-
-    if (platform.empty()) {
-        cout << "Platform name cannot be empty. Game not added.\n";
-        cout << "---------------------------------------------\n";
-        cout << "Press Enter to continue...";
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
-        return;
+    map<string, vector<GameEntry>> hits;
+    for (auto& g : allGames) {
+        if (toLower(g.name).find(lowTerm) != string::npos) {
+            hits[toLower(g.name)].push_back(g);
+        }
     }
 
-    cout << "Enter price (TL): ";
-    cin >> price;
-    cin.ignore();
-
-    GameEntry newGame = {platform, name, price};
-    allGames.push_back(newGame);
-
-    string filepath = dataFolder + toLower(platform) + ".txt";
-    ofstream outFile(filepath, ios::app);
-    if (outFile.is_open()) {
-        outFile << name << ";" << price << "\n";
-        outFile.close();
-        cout << "Game added successfully to " << platform << ".\n";
+    if (hits.empty()) {
+        cout << "\nNo results found for \"" << term << "\".\n";
     } else {
-        cerr << "Failed to write to file: " << filepath << "\n";
+        for (auto& [_, list] : hits) {
+            cout << "\nGame: " << list[0].name << "\n";
+            cout << "--------------------------------\n";
+            cout << "| " << left << setw(15) << "Platform"
+                 << "| " << setw(8) << "Price" << " |\n";
+            cout << "--------------------------------\n";
+            double mn = list[0].price;
+            for (auto& e : list) {
+                printf("| %-15s | %8.2f |\n",
+                       e.platform.c_str(), e.price);
+                mn = min(mn, e.price);
+            }
+            cout << "--------------------------------\n";
+            cout << "Cheapest: " << mn << " TL on ";
+            bool first = true;
+            for (auto& e : list) {
+                if (e.price == mn) {
+                    if (!first) cout << " - ";
+                    cout << e.platform;
+                    first = false;
+                }
+            }
+            cout << "\n";
+        }
     }
-
-    cout << "---------------------------------------------\n";
-    cout << "Press Enter to continue...";
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
+    cout << "\nPress Enter to continue...";
+    cin.get();
 }
 
 void deleteGame(vector<GameEntry>& allGames, const string& dataFolder) {
-    string nameToDelete;
-    cout << "Enter game name to delete: ";
-    getline(cin, nameToDelete);
-    string loweredName = toLower(trim(nameToDelete));
-    bool found = false;
+    while (true) {
+        // 1) Arama terimini al
+        cout << "Enter part of the game name to delete: ";
+        string input;
+        getline(cin, input);
+        string term = toLower(trim(input));
 
-    for (const auto& entry : fs::directory_iterator(dataFolder)) {
-        string filepath = entry.path().string();
-        string platform = entry.path().stem().string();
-        vector<GameEntry> games = readDataFromFile(filepath, platform);
-        vector<GameEntry> updatedGames;
+        // 2) Eşleşen oyun isimlerini topla
+        set<string> matchedNamesSet;
+        for (auto& g : allGames) {
+            if (toLower(g.name).find(term) != string::npos)
+                matchedNamesSet.insert(g.name);
+        }
 
-        for (const auto& game : games) {
-            if (toLower(game.name).find(loweredName) == string::npos) {
-                updatedGames.push_back(game);
+        if (matchedNamesSet.empty()) {
+            cout << "No games found matching \"" << input << "\".\n"
+                 << "Press Enter to continue...";
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return;
+        }
+
+        // 3) Listele, 0=all seçeneği ekle
+        vector<string> matchedNames(matchedNamesSet.begin(), matchedNamesSet.end());
+        cout << "\nFound these games:\n";
+        cout << "0) DELETE ALL LISTED GAMES\n";
+        for (size_t i = 0; i < matchedNames.size(); ++i)
+            cout << i+1 << ") " << matchedNames[i] << "\n";
+
+        // 4) Geçerli seçim alana kadar tekrar sor
+        set<int> choices;
+        while (true) {
+            cout << "Enter number(s) to delete (comma-separated): ";
+            string sel;
+            getline(cin, sel);
+
+            // parse
+            choices.clear();
+            stringstream ss(sel);
+            string tok;
+            while (getline(ss, tok, ',')) {
+                try {
+                    int idx = stoi(trim(tok));
+                    if (idx >= 0 && idx <= (int)matchedNames.size())
+                        choices.insert(idx);
+                } catch (...) { /* atla */ }
+            }
+            if (!choices.empty()) break;
+            cout << "Invalid selection, please try again.\n";
+        }
+
+        // 5) Eğer "0" varsa toplu silme onayı
+        if (choices.count(0)) {
+            cout << "\nYou are about to delete ALL " 
+                 << matchedNames.size() 
+                 << " games and all their platform entries.\n"
+                 << "Are you sure? (Y/N): ";
+            string confirm;
+            getline(cin, confirm);
+            if (!confirm.empty() && (confirm[0]=='Y'||confirm[0]=='y')) {
+                // toplu sil
+                for (auto& nameToDelete : matchedNames) {
+                    string lowName = toLower(nameToDelete);
+                    // hangi platformlarda?
+                    set<string> plats;
+                    for (auto& g : allGames)
+                        if (toLower(g.name)==lowName)
+                            plats.insert(toLower(g.platform));
+                    // her plat dosyasından sil
+                    for (auto& plat : plats) {
+                        string filepath = dataFolder + plat + ".txt";
+                        auto fileGames = readDataFromFile(filepath, plat);
+                        vector<GameEntry> updated;
+                        for (auto& fg : fileGames)
+                            if (toLower(fg.name)!=lowName)
+                                updated.push_back(fg);
+                        rewriteFile(filepath, updated);
+                    }
+                    // belleği temizle
+                    allGames.erase(remove_if(allGames.begin(), allGames.end(),
+                        [&](const GameEntry& g){
+                            return toLower(g.name)==lowName;
+                        }),
+                        allGames.end());
+                }
+                cout << "All selected games deleted.\n";
             } else {
-                found = true;
+                cout << "Bulk deletion cancelled.\n";
+            }
+        }
+        else {
+            // 6) Tek tek isim silme
+            for (int nameIdx : choices) {
+                string nameToDelete = matchedNames[nameIdx-1];
+                string lowName      = toLower(nameToDelete);
+
+                // platformları bul
+                set<string> plats;
+                for (auto& g : allGames)
+                    if (toLower(g.name)==lowName)
+                        plats.insert(toLower(g.platform));
+
+                vector<string> opts(plats.begin(), plats.end());
+                cout << "\n\"" << nameToDelete << "\" found on:\n";
+                for (size_t i = 0; i < opts.size(); ++i)
+                    cout << i+1 << ") " << opts[i] << "\n";
+                cout << "(0 = all) Enter platform numbers: ";
+
+                // geçerli plat seçeneği al
+                set<int> pchoices;
+                while (true) {
+                    string ps;
+                    getline(cin, ps);
+                    pchoices.clear();
+                    stringstream ss(ps);
+                    string tok;
+                    while (getline(ss, tok, ',')) {
+                        try {
+                            int idx = stoi(trim(tok));
+                            if (idx >= 0 && idx <= (int)opts.size())
+                                pchoices.insert(idx);
+                        } catch(...){}
+                    }
+                    if (!pchoices.empty()) break;
+                    cout << "Invalid selection, please try again.\n";
+                }
+
+                bool deleteAllPlat = pchoices.count(0);
+                for (size_t pi = 0; pi < opts.size(); ++pi) {
+                    if (deleteAllPlat || pchoices.count(pi+1)) {
+                        string plat = opts[pi];
+                        string filepath = dataFolder + plat + ".txt";
+                        auto fileGames = readDataFromFile(filepath, plat);
+                        vector<GameEntry> updated;
+                        for (auto& fg : fileGames)
+                            if (toLower(fg.name)!=lowName)
+                                updated.push_back(fg);
+                        rewriteFile(filepath, updated);
+                        allGames.erase(remove_if(allGames.begin(), allGames.end(),
+                            [&](const GameEntry& g){
+                                return toLower(g.name)==lowName
+                                    && toLower(g.platform)==plat;
+                            }),
+                            allGames.end());
+                    }
+                }
+                cout << "\"" << nameToDelete << "\" deleted.\n";
             }
         }
 
-        ofstream outFile(filepath);
-        if (outFile.is_open()) {
-            for (const auto& game : updatedGames) {
-                outFile << game.name << ";" << game.price << "\n";
-            }
-        } else {
-            cerr << "Failed to open file for writing: " << filepath << "\n";
+        // 7) Yeniden silmek isteyip istemediğini sor
+        cout << "\nDo you want to delete another game? (Y/N): ";
+        string again;
+        getline(cin, again);
+        if (again.empty() || (again[0]!='Y' && again[0]!='y')) {
+            cout << "Returning to main menu...\n";
+            break;
         }
     }
 
-    if (found) {
-        allGames.erase(remove_if(allGames.begin(), allGames.end(), [&](const GameEntry& g) {
-            return toLower(g.name).find(loweredName) != string::npos;
-        }), allGames.end());
-        cout << "Game(s) successfully deleted.\n";
-    } else {
-        cout << "Game not found.\n";
-    }
-    cout << "---------------------------------------------\n";
     cout << "Press Enter to continue...";
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 void updateGamePrice(vector<GameEntry>& allGames, const string& dataFolder) {
-    string gameName, platform;
-    double newPrice;
-
-    cout << "Enter game name to update: ";
-    getline(cin, gameName);
-    cout << "Enter platform name: ";
-    getline(cin, platform);
+    cout << "Enter game name to update price: ";
+    string name;
+    getline(cin, name);
+    cout << "Enter platform: ";
+    string plat;
+    getline(cin, plat);
     cout << "Enter new price: ";
-    cin >> newPrice;
+    double price;
+    cin >> price;
     cin.ignore();
 
-    gameName = trim(gameName);
-    platform = trim(platform);
+    string lowName = toLower(trim(name));
+    string lowPlat = toLower(trim(plat));
+    string filepath = dataFolder + lowPlat + ".txt";
+    auto fileGames = readDataFromFile(filepath, plat);
+    bool found = false;
 
-    string loweredName = toLower(gameName);
-    string loweredPlatform = toLower(platform);
-    bool updated = false;
-
-    string filepath = dataFolder + loweredPlatform + ".txt";
-    vector<GameEntry> games = readDataFromFile(filepath, platform);
-
-    for (auto& game : games) {
-        if (toLower(game.name) == loweredName && toLower(game.platform) == loweredPlatform) {
-            game.price = newPrice;
-            updated = true;
+    for (auto& g : fileGames) {
+        if (toLower(g.name) == lowName) {
+            g.price = price;
+            found = true;
         }
     }
+    rewriteFile(filepath, fileGames);
 
-    ofstream outFile(filepath);
-    if (outFile.is_open()) {
-        for (const auto& game : games) {
-            outFile << game.name << ";" << game.price << "\n";
-        }
-    } else {
-        cerr << "Failed to open file for writing: " << filepath << "\n";
-    }
-
-    if (updated) {
-        for (auto& game : allGames) {
-            if (toLower(game.name) == loweredName && toLower(game.platform) == loweredPlatform) {
-                game.price = newPrice;
+    if (found) {
+        for (auto& g : allGames) {
+            if (toLower(g.name) == lowName && toLower(g.platform) == lowPlat) {
+                g.price = price;
             }
         }
-        cout << "Game price updated successfully.\n";
+        cout << "Price updated successfully.\n";
     } else {
-        cout << "Game not found.\n";
+        cout << "Game not found on specified platform.\n";
     }
-    cout << "---------------------------------------------\n";
     cout << "Press Enter to continue...";
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');  // Burada Enter'a basıldığında işlemi sonlandırır.
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 int main() {
     vector<GameEntry> allGames;
     string dataFolder = "data/";
-
     if (!fs::exists(dataFolder)) {
         fs::create_directory(dataFolder);
     }
 
-    for (const auto& entry : fs::directory_iterator(dataFolder)) {
-        string path = entry.path().string();
-        string platform = entry.path().stem().string();
-        vector<GameEntry> games = readDataFromFile(path, platform);
-        allGames.insert(allGames.end(), games.begin(), games.end());
+    for (auto& e : fs::directory_iterator(dataFolder)) {
+        string path     = e.path().string();
+        string plat     = e.path().stem().string();
+        auto entries    = readDataFromFile(path, plat);
+        allGames.insert(allGames.end(), entries.begin(), entries.end());
     }
 
-    string choice;
     while (true) {
-        cout << "\n--- MENU ---\n";
-        cout << "1. Search for a game\n";
-        cout << "2. List all available games\n";
-        cout << "3. Add a new game\n";
-        cout << "4. Delete a game\n";
-        cout << "5. Update game price\n";
-        cout << "6. Exit\n";
-        cout << "Enter your choice (1-6): ";
+        cout << "\n--- MENU ---\n"
+             << "1) Search for a game\n"
+             << "2) List all available games\n"
+             << "3) Bulk add\n"
+             << "4) Delete a game\n"
+             << "5) Update game price\n"
+             << "6) Exit\n"
+             << "Enter choice (1-6): ";
+        string choice;
         getline(cin, choice);
 
         if (choice == "1") {
-            string gameName;
-            cout << "Enter game name: ";
-            getline(cin, gameName);
-            searchGame(gameName, allGames);
-        }
-        else if (choice == "2") {
+            searchGame(allGames);
+        } else if (choice == "2") {
             listAllGames(allGames);
-        }
-        else if (choice == "3") {
-            addGame(allGames, dataFolder);
-        }
-        else if (choice == "4") {
+        } else if (choice == "3") {
+            addGamesBulk(allGames, dataFolder);
+        } else if (choice == "4") {
             deleteGame(allGames, dataFolder);
-        }
-        else if (choice == "5") {
+        } else if (choice == "5") {
             updateGamePrice(allGames, dataFolder);
-        }
-        else if (choice == "6") {
+        } else if (choice == "6") {
             cout << "Exiting program. Goodbye!\n";
             break;
-        }
-        else {
-            cout << "Invalid choice. Try again.\n";
+        } else {
+            cout << "Invalid choice. Please try again.\n";
         }
     }
 
