@@ -401,7 +401,7 @@ int main() {
              << "2) List all available games\n"
              << "3) Bulk add\n"
              << "4) Delete a game\n"
-             << "5) Update game price\n"
+             << "5) Update the price of a game\n"
              << "6) Exit\n"
              << "Enter choice (1-6): ";
         string choice;
